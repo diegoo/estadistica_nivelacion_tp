@@ -4,30 +4,46 @@ author: "Diego Dell'Era"
 output: pdf_document
 ---
 
-Dimensiones y crecimiento de los mejillones
-===========================================
+Dimensiones y crecimiento de los abulones
+=========================================
 
 # Propósito
 
 ```
-Aplicar herraimientas de estadística descriptiva & de inferencia para analizar un data set.
+Aplicar herramientas de estadística descriptiva & de inferencia para analizar un data set obtenido de: https://archive.ics.uci.edu/ml/datasets/Abalone
 ```
 
 # Análisis exploratorio
 
 ### Cargar los datos
 
+Como la tabla viene sin nombres, se los agregamos usando la información que trae la descripción del data set (`data/dataset.txt`):
+
 ```{r, results='markup'}
-nombres <- c('sex','length','diameter','height','weight.w','weight.s','weight.v','weight.sh','rings')
-dataset <- read.csv("data/dataset.csv")
-names(dataset) <- nombres
+abulones <- read.csv("data/dataset.csv")
+names(abulones) <- c("Sex", "Length", "Diameter", "Height", "WholeWeight", "ShuckedWeight", "VisceraWeight", "ShellWeight", "Rings")
 ```
 
-The dataset contains `r dim(ToothGrowth)[1]` observations about the effect of vitamin C on tooth growth in guinea pigs: *len* is the dependent variable, *supp* and *dose* are the independent variables.
+El data set contiene mediciones de especímenes de un bicho llamado *abulón* (al parecer, es un caracol marino de California). Quienes tomaron las mediciones recolectaron los datos para ver si podían predecir la edad del abulón a partir de sus dimensiones, porque eso es más rápido que el método tradicional (i.e. cortarlo por la mitad, teñirlo y contar los anillos internos mediante el microscopio).
 
-### Plot the dataset
+# Primero convertimos el sexo a *character*, porque es más cómodo que un *factor*:
 
-This plot is provided by the R package:
+# ```{r, results='markup'}
+# abulones$Sex <- as.character(abulones$Sex)
+# ```
+
+Para empezar, podemos boxplotear los bichos por sexo:
+
+```{r, results='markup'}
+par(mfrow=c(1,3))
+boxplot(subset(abulones, Sex == 'F')$Height, main = "femenino")
+boxplot(subset(abulones, Sex == 'M')$Height, main = "masculino")
+boxplot(subset(abulones, Sex == 'I')$Height, main = "juvenil")
+```
+#
+plot(wt,mpg, main="Scatterplot of wt vs. mpg")
+
+### Plotear los datos
 
 ```{r, results='markup', fig.width=8, fig.height=4}
 require(graphics)
