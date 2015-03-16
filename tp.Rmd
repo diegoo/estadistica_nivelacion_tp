@@ -1,0 +1,108 @@
+---
+title: "Nivelación - Estadística - TP"
+author: "Diego Dell'Era"
+output: pdf_document
+---
+
+Dimensiones y crecimiento de los mejillones
+===========================================
+
+# Propósito
+
+```
+Aplicar herraimientas de estadística descriptiva & de inferencia para analizar un data set.
+```
+
+# Análisis exploratorio
+
+### Cargar los datos
+
+```{r, results='markup'}
+nombres <- c('sex','length','diameter','height','weight.w','weight.s','weight.v','weight.sh','rings')
+dataset <- read.csv("data/dataset.csv")
+names(dataset) <- nombres
+```
+
+The dataset contains `r dim(ToothGrowth)[1]` observations about the effect of vitamin C on tooth growth in guinea pigs: *len* is the dependent variable, *supp* and *dose* are the independent variables.
+
+### Plot the dataset
+
+This plot is provided by the R package:
+
+```{r, results='markup', fig.width=8, fig.height=4}
+require(graphics)
+coplot(len ~ dose | supp, data = ToothGrowth, panel = panel.smooth,
+        xlab = "ToothGrowth data: length vs dose, given type of supplement")
+```
+
+It shows that there is a clear link between higher doses and tooth length. The link between supplement type is not so clear, i.e. to the naked eye, the curves look pretty similar for both supplements.
+
+We can also plot boxes for each variable: first, tooth length as a function of the supplement type, then tooth length as a function of the dose.
+
+```{r, results='markup', fig.width=8, fig.height=4}
+par(mfrow=c(1,2))
+boxplot(len ~ supp, data = ToothGrowth, main = "Tooth growth | supplement type")
+boxplot(len ~ dose, data = ToothGrowth, main = "Tooth growth | dose")
+```
+
+Again, the link between dose and tooth growth looks pretty clear.
+
+### Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose.
+
+We are going to compare samples (two at a time) using *Student's t-test*.
+
+#### Assumptions:
+
+- 1. the two samples are taken from populations that follow a Gaussian distribution. Histograms for tooth length show that they are indeed quite normal, if a bit skewed:
+
+```{r, results='markup', fig.width=8, fig.height=4}
+par(mfrow=c(1,2))
+hist(ToothGrowth[ToothGrowth$supp == 'OJ',][1]$len, main = "tooth length | OJ", ylab = "length", xlab = "")
+hist(ToothGrowth[ToothGrowth$supp == 'VC',][1]$len, main = "tooth length | VC", ylab = "length", xlab = "")
+```
+
+- 2. the samples are *iid*.
+
+Only if there is a direct relationship between each specific pig in each sample, then can we set the *paired* parameter to TRUE. I found the dataset introduction unclear, but later learned that the original paper by Crampton, E.W. makes it clear that these observations come from 60 different guinea pigs, as each had to be killed to take the measurement :(
+
+- 3. the number of observations is rather small, so Student's t-test is appropiate.
+
+#### Test Setup
+
+We divide the observations in arrays by (dose + supplement type)
+
+```{r, results='markup'}
+dose05_suppOJ <- ToothGrowth[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == 0.5,]$len
+dose05_suppVC <- ToothGrowth[ToothGrowth$supp == 'VC' & ToothGrowth$dose == 0.5,]$len
+
+dose1_suppOJ <- ToothGrowth[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == 1,]$len
+dose1_suppVC <- ToothGrowth[ToothGrowth$supp == 'VC' & ToothGrowth$dose == 1,]$len
+
+dose2_suppOJ <- ToothGrowth[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == 2,]$len
+dose2_suppVC <- ToothGrowth[ToothGrowth$supp == 'VC' & ToothGrowth$dose == 2,]$len
+```
+
+#### Test results
+
+Now we compare the two supplement types as the dose increases from 0 to 0.5 and from 0.5 to 1 ml.:
+
+```{r, results='markup',echo=TRUE}
+t.test(dose05_suppOJ, dose05_suppVC, paired=FALSE, conf.level = 0.95)$p.value
+t.test(dose1_suppOJ, dose1_suppVC, paired=FALSE, conf.level = 0.95)$p.value
+```
+
+In both cases (from 0 to 0.5, from 0.5 to 1) there is a significant difference between supplement types, because the p-values are lower than 0.05 at a confidence level of 0.95.
+
+This means that, if the $H_0$ hypothesis is that there is no difference between the effect of each supplement on mean tooth length, then with these p-values that hypothesis can be rejected.
+
+Let's compare the dose increase from 1 to 2 ml.:
+
+```{r, results='markup',echo=TRUE}
+from_1to2 <- t.test(dose2_suppOJ, dose2_suppVC, paired=FALSE, conf.level = 0.95)
+from_1to2$p.value
+from_1to2$conf.int
+```
+
+The p-value is now greater than 0.05. Also, The confidence interval for mean length increase contains the value 0. We conclude from these two points that we cannot reject the $H_0$ hypothesis.
+
+It would seem that, for lower doses, the OJ method provides better results in tooth length than the VC method. But, past a certain dose, it doesn't matter how the vitamin is administered.
