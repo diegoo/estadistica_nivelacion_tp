@@ -71,6 +71,13 @@ buscamos qué correlaciones hay, con la matriz:
 
 cor(machos[,2:9]) # excluir la columna 1, que tiene el sexo
 
+modelo:
+
+modelo_altura <- lm(Rings ~ Height, data = machos)
+
+qplot(x = Height, y = Rings, data = machos) + geom_smooth(method = lm)
+
+
 
 plot(wt,mpg, main="Scatterplot of wt vs. mpg")
 
