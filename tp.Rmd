@@ -21,84 +21,92 @@ Como la tabla viene sin nombres, se los agregamos usando la información que tra
 
 ```{r, results='markup'}
 abulones <- read.csv("data/dataset.csv")
-names(abulones) <- c("Sex", "Length", "Diameter", "Height", "WholeWeight", "ShuckedWeight", "VisceraWeight", "ShellWeight", "Rings")
+names(abulones) <- c("Sexo", "Longitud", "Diámetro", "Altura", "PesoTotal", "PesoNeto", "PesoVísceras", "PesoCaparazón", "Edad")
 ```
 
 El data set contiene mediciones de especímenes de un bicho llamado *abulón* (al parecer, es un caracol marino de California). Quienes tomaron las mediciones recolectaron los datos para ver si podían predecir la edad del abulón a partir de sus dimensiones, porque eso es más rápido que el método tradicional (i.e. cortarlo por la mitad, teñirlo y contar los anillos internos mediante el microscopio).
 
 # Primero convertimos el sexo a *character*, porque es más cómodo que un *factor*:
-
 # ```{r, results='markup'}
-# abulones$Sex <- as.character(abulones$Sex)
+# abulones$Sex <- as.character(abulones$Sexo)
 # ```
 
-Limpiar los valores incorrectos:
+Una mirada rápida indica que no hay valores 'null' o faltantes, así que sólo resta validar que ni la altura ni el peso total sean negativos:
 
-abulones <- subset(abulones, !(Height == 0 | WholeWeight == 0))
+```{r, results='markup'}
+abulones <- subset(abulones, !(Altura <= 0 | PesoTotal <= 0))
+```
 
-La altura:
-
-qplot(hembras$WholeWeight, binwidth=0.1)
-
-cuartiles:
-
-> quantile(machos$Height)
-   0%   25%   50%   75%  100% 
-0.025 0.130 0.155 0.175 0.515 
-
-eliminar los que están más allá de los bigotes, usando la distancia intercuartil:
-
-limite_bigote_inferior = mean(machos$Height) - (0.175 - 0.130) * 1.5
-limite_bigote_superior = mean(machos$Height) + (0.175 - 0.130) * 1.5
-machos <- subset(machos, Height >= limite_bigote_inferior & Height <= limite_bigote_superior)
-hist(machos$Height)
-
-Para empezar, podemos boxplotear los bichos por sexo:
+Para comodidad, agrupamos los abulones por sexo:
 
 ```{r, results='markup'}
 machos <- subset(abulones, Sex == 'M')
 hembras <- subset(abulones, Sex == 'F')
 juveniles <- subset(abulones, Sex == 'I')
+```
 
+La altura:
+
+```{r, results='markup'}
+qplot(hembras$PesoTotal, binwidth=0.1)
+
+cuartiles:
+
+```{r, results='markup'}
+quantile(machos$Altura)
+   0%   25%   50%   75%  100% 
+0.025 0.130 0.155 0.175 0.515 
+```
+
+eliminar los que están más allá de los bigotes, usando la distancia intercuartil:
+
+```{r, results='markup'}
+limite_bigote_inferior = mean(machos$Height) - (0.175 - 0.130) * 1.5
+limite_bigote_superior = mean(machos$Height) + (0.175 - 0.130) * 1.5
+machos <- subset(machos, Height >= limite_bigote_inferior & Height <= limite_bigote_superior)
+hist(machos$Height)
+```
+
+Para empezar, podemos boxplotear los bichos por sexo:
+
+```{r, results='markup'}
 par(mfrow=c(1,3))
 boxplot(hembras$Height, main = "hembras")
 boxplot(machos$Height, main = "machos")
 boxplot(juveniles$Height, main = "juveniles")
 ```
-#
 
 buscamos qué correlaciones hay, con la matriz:
 
+```{r, results='markup'}
 cor(machos[,2:9]) # excluir la columna 1, que tiene el sexo
+```
 
 modelo:
 
+```{r, results='markup'}
 modelo_altura <- lm(Rings ~ Height, data = machos)
-
-qplot(x = Height, y = Rings, data = machos) + geom_smooth(method = lm)
-
-
-
-plot(wt,mpg, main="Scatterplot of wt vs. mpg")
+qplot(x = Altura, y = Anillos, data = machos) + geom_smooth(method = lm)
+```
 
 ### Plotear los datos
 
 ```{r, results='markup', fig.width=8, fig.height=4}
 require(graphics)
-coplot(Rings ~ Height, data = machos, panel = panel.smooth, xlab = "altura vs edad")
+coplot(Anillos ~ Altura, data = machos, panel = panel.smooth, xlab = "edad en términos de altura")
 ```
 
-relación entre altura/peso y edad (anillos):
+relación entre altura/peso y edad:
 
-qplot(ShellWeight, Rings, data=abulones, geom=c("point", "smooth"), method="lm")
+```{r, results='markup'}
+qplot(PesoCaparazon, Anillos, data=abulones, geom=c("point", "smooth"), method="lm")
+```
 
 y facetando por sexo:
 
-ggplot(abulones, aes(Height, Rings)) + geom_jitter(alpha=0.25) + geom_smooth(method=lm, se=FALSE) +  facet_grid(. ~ Sex)
-
-
-
-
+```{r, results='markup'}
+ggplot(abulones, aes(Altura, Anillos)) + geom_jitter(alpha=0.25) + geom_smooth(method=lm, se=FALSE) +  facet_grid(. ~ Sexo)
+```
 
 It shows that there is a clear link between higher doses and tooth length. The link between supplement type is not so clear, i.e. to the naked eye, the curves look pretty similar for both supplements.
 
@@ -109,10 +117,6 @@ par(mfrow=c(1,2))
 boxplot(len ~ supp, data = ToothGrowth, main = "Tooth growth | supplement type")
 boxplot(len ~ dose, data = ToothGrowth, main = "Tooth growth | dose")
 ```
-
-Again, the link between dose and tooth growth looks pretty clear.
-
-### Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose.
 
 We are going to compare samples (two at a time) using *Student's t-test*.
 
@@ -128,8 +132,6 @@ hist(ToothGrowth[ToothGrowth$supp == 'VC',][1]$len, main = "tooth length | VC", 
 
 - 2. the samples are *iid*.
 
-Only if there is a direct relationship between each specific pig in each sample, then can we set the *paired* parameter to TRUE. I found the dataset introduction unclear, but later learned that the original paper by Crampton, E.W. makes it clear that these observations come from 60 different guinea pigs, as each had to be killed to take the measurement :(
-
 - 3. the number of observations is rather small, so Student's t-test is appropiate.
 
 #### Test Setup
@@ -139,12 +141,6 @@ We divide the observations in arrays by (dose + supplement type)
 ```{r, results='markup'}
 dose05_suppOJ <- ToothGrowth[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == 0.5,]$len
 dose05_suppVC <- ToothGrowth[ToothGrowth$supp == 'VC' & ToothGrowth$dose == 0.5,]$len
-
-dose1_suppOJ <- ToothGrowth[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == 1,]$len
-dose1_suppVC <- ToothGrowth[ToothGrowth$supp == 'VC' & ToothGrowth$dose == 1,]$len
-
-dose2_suppOJ <- ToothGrowth[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == 2,]$len
-dose2_suppVC <- ToothGrowth[ToothGrowth$supp == 'VC' & ToothGrowth$dose == 2,]$len
 ```
 
 #### Test results
@@ -153,21 +149,9 @@ Now we compare the two supplement types as the dose increases from 0 to 0.5 and 
 
 ```{r, results='markup',echo=TRUE}
 t.test(dose05_suppOJ, dose05_suppVC, paired=FALSE, conf.level = 0.95)$p.value
-t.test(dose1_suppOJ, dose1_suppVC, paired=FALSE, conf.level = 0.95)$p.value
 ```
 
 In both cases (from 0 to 0.5, from 0.5 to 1) there is a significant difference between supplement types, because the p-values are lower than 0.05 at a confidence level of 0.95.
-
 This means that, if the $H_0$ hypothesis is that there is no difference between the effect of each supplement on mean tooth length, then with these p-values that hypothesis can be rejected.
 
-Let's compare the dose increase from 1 to 2 ml.:
-
-```{r, results='markup',echo=TRUE}
-from_1to2 <- t.test(dose2_suppOJ, dose2_suppVC, paired=FALSE, conf.level = 0.95)
-from_1to2$p.value
-from_1to2$conf.int
-```
-
-The p-value is now greater than 0.05. Also, The confidence interval for mean length increase contains the value 0. We conclude from these two points that we cannot reject the $H_0$ hypothesis.
-
-It would seem that, for lower doses, the OJ method provides better results in tooth length than the VC method. But, past a certain dose, it doesn't matter how the vitamin is administered.
+...The p-value is now greater than 0.05. Also, The confidence interval for mean length increase contains the value 0. We conclude from these two points that we cannot reject the $H_0$ hypothesis.
