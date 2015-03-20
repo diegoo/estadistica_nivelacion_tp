@@ -7,13 +7,13 @@ output: pdf_document
 Dimensiones y crecimiento de los abulones
 =========================================
 
-# Propósito
+Propósito: aplicar herramientas de estadística descriptiva & de inferencia para analizar un data set obtenido del UCI Machine Learning Archive: https://archive.ics.uci.edu/ml/datasets/Abalone
 
-```
-Aplicar herramientas de estadística descriptiva & de inferencia para analizar un data set obtenido del UCI Machine Learning Data Set Repository: https://archive.ics.uci.edu/ml/datasets/Abalone
-```
+Lo elegí porque está fácilmente disponible para R, y tiene las dimensiones requeridas para el TP: una buena cantidad de registros (aprox. 4K) y la cantidad justa de variables que se piden (9).
 
-# Análisis exploratorio
+# Descripción
+
+El data set contiene mediciones de especímenes de un bicho llamado *abulón* (al parecer, es un caracol marino de California). Quienes tomaron las mediciones recolectaron los datos para ver si podían predecir la edad del abulón a partir de sus dimensiones, porque eso es más rápido que el método tradicional (i.e. cortarlo por la mitad, teñirlo y contar los anillos internos mediante el microscopio).
 
 ### Cargar los datos
 
@@ -21,134 +21,165 @@ Como la tabla viene sin nombres, se los agregamos usando la información que tra
 
 ```{r, results='markup'}
 abulones <- read.csv("data/dataset.csv")
-names(abulones) <- c("Sexo", "Longitud", "Diámetro", "Altura", "PesoTotal", "PesoNeto", "PesoVísceras", "PesoCaparazón", "Edad")
+names(abulones) <- c("Sexo", "Longitud", "Diámetro", "Altura",
+"PesoTotal", "PesoNeto", "PesoVísceras", "PesoCaparazón", "Edad")
 ```
 
-El data set contiene mediciones de especímenes de un bicho llamado *abulón* (al parecer, es un caracol marino de California). Quienes tomaron las mediciones recolectaron los datos para ver si podían predecir la edad del abulón a partir de sus dimensiones, porque eso es más rápido que el método tradicional (i.e. cortarlo por la mitad, teñirlo y contar los anillos internos mediante el microscopio; la edad del abulón es = nro. de anillos + 1.5).
+Aclaración: la edad del abulón es = nro. de Anillos + 1.5, según la descripción. Por eso, en lugar de usar "Anillos" como nombre para la última variable (que es en realidad lo que trae en el data set), uso "Edad". Para nuestros fines, es lo mismo.
 
-# Primero convertimos el sexo a *character*, porque es más cómodo que un *factor*:
-# ```{r, results='markup'}
-# abulones$Sex <- as.character(abulones$Sexo)
-# ```
+### Limpieza
 
 Una mirada rápida a los datos indica que no hay valores 'null' o faltantes, así que sólo resta validar que ni la altura ni el peso total sean negativos:
 
 ```{r, results='markup'}
 abulones <- subset(abulones, !(Altura <= 0 | PesoTotal <= 0))
+summary(abulones)
+head(abulones)
 ```
 
-Para comodidad, agrupamos los abulones por sexo:
+Para comodidad, dividimos los abulones por sexo, así podemos hacer operaciones con cada grupo:
 
 ```{r, results='markup'}
-machos <- subset(abulones, Sex == 'M')
-hembras <- subset(abulones, Sex == 'F')
-juveniles <- subset(abulones, Sex == 'I')
+machos <- subset(abulones, Sexo == 'M')
+hembras <- subset(abulones, Sexo == 'F')
+juveniles <- subset(abulones, Sexo == 'I')
 ```
 
-La altura:
+### Gráficos exploratorios
+
+Ploteamos una de las variables, el PesoTotal:
 
 ```{r, results='markup'}
-qplot(hembras$PesoTotal, binwidth = 0.1)
+hist(hembras$PesoTotal, main = "peso total | hembras")
+```
 
-cuartiles:
+Parece normal. Queda más claro si
+
+1) ploteamos su función de densidad:
+
+```{r, results='markup'}
+plot(density(hembras$PesoTotal))
+```
+
+2) comparamos con una normal usando Q-Q plot:
+
+```{r, results='markup'}
+qqnorm(hembras$PesoTotal)
+qqline(hembras$PesoTotal, col = 2, lwd=2, lty=2)
+```
+
+Un boxplot para ver la dispersión de una variable con un máximo sospechoso, la Altura:
+
+```{r, results='markup'}
+boxplot(hembras$Altura)
+```
+
+Hmmm. Varios *outliers*. Es razonable pensar que el proceso de sacarles las entrañas, con los jugos que se pierden en el proceso, etc. ya deben influir un poco en las mediciones, así que mejor reducir la dispersión donde sea posible => sacamos los valores extremos. Para eso empezamos por calcular los cuartiles:
 
 ```{r, results='markup'}
 quantile(machos$Altura)
-   0%   25%   50%   75%  100% 
-0.025 0.130 0.155 0.175 0.515 
+quantile(hembras$Altura)
+quantile(juveniles$Altura)
 ```
 
-eliminar los que están más allá de los bigotes (usando 1.5 * la distancia intercuartil):
+Para no tener que lidiar con *outliers* (sobre todo entre los juveniles, la categoría donde hay más), eliminamos los bichos que estén más allá de los bigotes del boxplot, usando los límites de la caja +/- 1.5 * la distancia intercuartil:
 
 ```{r, results='markup'}
-limite_bigote_inferior = mean(machos$Altura) - (0.175 - 0.130) * 1.5
-limite_bigote_superior = mean(machos$Altura) + (0.175 - 0.130) * 1.5
+limite_bigote_inferior = 0.140 - (0.175 - 0.140) * 1.5
+limite_bigote_superior = 0.175 + (0.175 - 0.140) * 1.5
+hembras <- subset(hembras, Altura >= limite_bigote_inferior & Altura <= limite_bigote_superior)
+
+limite_bigote_inferior = 0.130 - (0.175 - 0.130) * 1.5
+limite_bigote_superior = 0.175 + (0.175 - 0.130) * 1.5
 machos <- subset(machos, Altura >= limite_bigote_inferior & Altura <= limite_bigote_superior)
-hist(machos$Altura)
+
+limite_bigote_inferior = 0.08875 - (0.130 - 0.08875) * 1.5
+limite_bigote_superior = 0.08875 + (0.130 - 0.08875) * 1.5
+juveniles <- subset(juveniles, Altura >= limite_bigote_inferior & Altura <= limite_bigote_superior)
 ```
 
-Para empezar, podemos boxplotear los bichos por sexo:
+```{r, results='markup', fig.width = 16, fig.height = 4}
+par(mfrow=c(1,3))
+hist(hembras$Altura, main = "altura (hembras)")
+hist(machos$Altura, main = "altura (machos)")
+hist(juveniles$Altura, main = "altura (juveniles)")
+```
 
-```{r, results='markup'}
+Después de la limpieza, los boxplots por sexo ya no tienen *outliers*:
+
+```{r, results='markup', fig.width = 16, fig.height = 6}
 par(mfrow=c(1,3))
 boxplot(hembras$Altura, main = "hembras")
 boxplot(machos$Altura, main = "machos")
 boxplot(juveniles$Altura, main = "juveniles")
 ```
 
-Para saber cuál(es) de las variables podríamos usar para predecir la edad (i.e. los Anillos), empezamos por calcular el índice de correlación entre la edad y cada una de esas variables. En realidad, podemos pedir la matriz de todas las correlaciones, que es más fácil. Excluimos la columna 1, que tiene el sexo, porque no sirve para predecir.
+## Test de hipótesis
+
+Machos y hembras se ven *muy* parecidos. Podemos usar una herramienta de inferencia estadística para saber si la media de Edad varía según el sexo.
+
+Planteamos como hipótesis $H_0$ que la media no cambia (por lo tanto, si armamos un modelo que prediga la Edad para un sexo, seguramente nos sirva también para el otro). La hipótesis alternativa sería que la media sí cambia; para esto necesitamos mucha evidencia.
+
+Aclaración: podemos usar t-test porque se cumplen las premisas: 1) las muestras se tomaron de manera *iid*, 2) como vimos, tienen distribución normal, y 3) tienen varianzas similares.
+
+```{r, results='markup'}
+var(machos$Edad)
+var(hembras$Edad)
+```
+
+Juntamos machos y hembras en un nuevo data set, y corremos el t-test:
+    
+```{r, results='markup'}
+machos_y_hembras <- rbind(machos, hembras)
+t.test(Edad ~ Sexo, data = machos_y_hembras, paired=FALSE)
+```
+
+Vemos que el intervalo de confianza, usando el nivel de confianza por defecto (95%), está alrededor de 0... así que no podemos rechazar cómodamente la null-hypothesis. Conclusión: machos y hembras se comportan más o menos igual con respecto a los Anillos que denotan su Edad.
+
+## Modelo
+
+Para saber cuál(es) de las variables podríamos usar para predecir la Edad, empezamos por calcular el índice de correlación entre la edad y cada una de esas variables. En realidad, podemos pedirle a R la matriz de todas las correlaciones, total es gratis. Excluimos la columna 1, que tiene el sexo, porque es una variable de tipo 'categoría', que no sirve para predecir, y tomamos las variables de la 2 a la 9:
 
 ```{r, results='markup'}
 cor(machos[,2:9]) 
 ```
 
-(Es natural que haya correlación entre los pesos de las distintas partes del bicho y el peso total).
+Obviamente hay correlación entre los pesos de las distintas partes del bicho (las vísceras, el caparazón) y el peso total. Todas las variables están más o menos correlacionadas, como es de esperar (el bicho crece orgánicamente en todas las dimensiones), así que para armar un modelo que prediga la Edad (creo que) podríamos elegir la variable que más correlacionada esté, y descartar las demás, sin perder mucha información o poder predictivo.
 
-modelo:
-
-```{r, results='markup'}
-modelo_altura <- lm(Rings ~ Height, data = machos)
-qplot(x = Altura, y = Anillos, data = machos) + geom_smooth(method = lm)
-```
-
-### Plotear los datos
-
-```{r, results='markup', fig.width=8, fig.height=4}
-require(graphics)
-coplot(Anillos ~ Altura, data = machos, panel = panel.smooth, xlab = "edad en términos de altura")
-```
-
-relación entre altura/peso y edad:
+Ploteamos un modelo de regresión lineal que se ajuste a la Edad usando la Altura, y otro usando el Peso del Caparazón: 
 
 ```{r, results='markup'}
-qplot(PesoCaparazon, Anillos, data=abulones, geom=c("point", "smooth"), method="lm")
+modelo_altura <- lm(Edad ~ Altura, data = machos)
+summary(modelo_altura)
+
+modelo_peso <- lm(Edad ~ PesoCaparazón, data = machos)
+summary(modelo_peso)
 ```
 
-y facetando por sexo:
+El p-valor < 2.2e-16 indica que es bajísima la probabilidad de que la variable elegida no sea relevante para el modelo que predice Edad.
+
+También es importante que los errores del modelo respecto de las Edades reales tengan una distribución más o menos normal; los ploteamos para revisar:
 
 ```{r, results='markup'}
-ggplot(abulones, aes(Altura, Anillos)) + geom_jitter(alpha=0.25) + geom_smooth(method=lm, se=FALSE) + facet_grid(. ~ Sexo)
+hist(modelo_altura$residuals, main = "errores residuales | modelo altura")
 ```
 
-```{r, results='markup', fig.width=8, fig.height=4}
-par(mfrow=c(1,2))
-boxplot(len ~ supp, data = ToothGrowth, main = "Tooth growth | supplement type")
-boxplot(len ~ dose, data = ToothGrowth, main = "Tooth growth | dose")
+¿Qué pinta tiene el modelo sobre los datos?
+
+```{r, results='markup', fig.width = 10, fig.height = 4}
+qplot(x = Altura, y = Edad, data = machos) + geom_smooth(method = lm)
 ```
 
-Vamos a comparar muestras mediante el t-test de Student.
-
-#### Premisas:
-
-- 1. las muestras son *iid* y tienen una distribución normal.
-
-* TODO => graficar!
-
-```{r, results='markup', fig.width=8, fig.height=4}
-par(mfrow=c(1,2))
-hist(ToothGrowth[ToothGrowth$supp == 'OJ',][1]$len, main = "tooth length | OJ", ylab = "length", xlab = "")
-hist(ToothGrowth[ToothGrowth$supp == 'VC',][1]$len, main = "tooth length | VC", ylab = "length", xlab = "")
-```
-
-- 2. the samples are *iid*.
-
-- 3. the number of observations is rather small, so Student's t-test is appropiate.
-
-#### Test Setup
-
-We divide the observations in arrays by (dose + supplement type)
+Podemos juntar los subconjuntos limpios en uno solo:
 
 ```{r, results='markup'}
-dose05_suppOJ <- ToothGrowth[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == 0.5,]$len
-dose05_suppVC <- ToothGrowth[ToothGrowth$supp == 'VC' & ToothGrowth$dose == 0.5,]$len
+abulones <- rbind(machos, hembras, juveniles) 
 ```
 
-#### Test results
+... y plotear el modelo, ahora armado sobre todos los datos, facetando por sexo:
 
-```{r, results='markup',echo=TRUE}
-t.test(dose05_suppOJ, dose05_suppVC, paired=FALSE, conf.level = 0.95)$p.value
+```{r, results='markup', fig.width = 16, fig.height = 4}
+ggplot(abulones, aes(Altura, Edad)) + geom_jitter(alpha = 0.5) + geom_smooth(method = lm, se = FALSE) + facet_grid(. ~ Sexo)
 ```
 
-In both cases (from 0 to 0.5, from 0.5 to 1) there is a significant difference between supplement types, because the p-values are lower than 0.05 at a confidence level of 0.95. This means that, if the $H_0$ hypothesis is that there is no difference between the effect of each supplement on mean tooth length, then with these p-values that hypothesis can be rejected.
-
-...The p-value is now greater than 0.05. Also, The confidence interval for mean length increase contains the value 0. We conclude from these two points that we cannot reject the $H_0$ hypothesis.
+Los especímenes por encima de la línea parecen bastante dispersos; eso no me satisface. Creo que un buen modelo podría combinar las variables de los bichos de alguna manera para predecir mejor la Edad, pero me faltan conocimientos para armar algo así :(
