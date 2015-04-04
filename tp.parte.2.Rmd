@@ -15,7 +15,9 @@ Gracias por la devolución. Copio tu corrección:
 >  (...) el intervalo de confianza no incluye al 0, eso quiere decir
 >  que sí hay diferencia de medias. Estoy en lo correcto?
 
-Sí, mala mía. Antes puse que no podía rechazar cómodamente la *null-hypothesis* porque el intervalo estaba *casi* todo alrededor del cero... pero es cierto, **no contiene el cero**, así que puedo rechazar y decir que las medias de los dos grupos son distintas.
+Sí, mala mía. Antes puse que no podía rechazar cómodamente la *null-hypothesis* porque el intervalo estaba casi todo alrededor del cero... pero es cierto, *no contiene el cero*, así que las medias de los dos grupos *son distintas*.
+
+(Lo que sigue es lo que cambio en el TP original a partir del test de hipótesis.)
 
 Conclusión modificada, entonces: los dos grupos comparados en el t-test (machos y hembras) se comportan con una pequeña diferencia con respecto a los Anillos que denotan su Edad.
 
